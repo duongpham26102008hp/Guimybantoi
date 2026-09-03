@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gửi My ✨</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #f7f4ea;
+            width: 100%;
+            max-width: 380px;
+            height: 480px;
+            border-radius: 16px;
+            border: 4px solid #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            box-shadow: 8px 8px 0px #000;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 320px;
+        }
+
+        .btn-replay {
+            padding: 10px 20px;
+            background: #000;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            display: none;
+            box-shadow: 3px 3px 0px #666;
+        }
+
+        .btn-replay:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #666;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <canvas id="animCanvas" width="340" height="320"></canvas>
+        <button class="btn-replay" id="replayBtn" onclick="restartAnimation()">Xem lại 🔄</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('animCanvas');
+        const ctx = canvas.getContext('2d');
+        const replayBtn = document.getElementById('replayBtn');
+
+        const messages = [
+            { text: "Hi My! 🖐️", emotion: "wave" },
+            { text: "Chúc My lên Hà Nội\nhọc đại học thật bình an nha!", emotion: "happy" },
+            { text: "Wishing you all the best\non this new journey in Hanoi.", emotion: "talk" },
+            { text: "Hope you adapt quickly,\nmake great memories & shine! ✨", emotion: "excited" },
+            { text: "Bà nhớ giữ gìn sức khỏe\nvà luôn xinh đẹp nhé =))!", emotion: "wink" }
+        ];
+
+        let msgIndex = 0;
+        let charIndex = 0;
+        let currentText = "";
+        let isTyping = false;
+        let frame = 0;
+
+        // Biến điều khiển chuyển động
+        let armAngle = 0;
+        let blinkTimer = 0;
+        let isBlinking = false;
+
+        function drawHandDrawnLine(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            // Thêm độ rung nhẹ cho đường vẽ giống hoạt hình vẽ tay
+            let midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 1.5;
+            let midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 1.5;
+            ctx.quadraticCurveTo(midX, midY, x2, y2);
+            ctx.stroke();
+        }
+
+        function drawCharacter(x, y, emotion) {
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000';
+            ctx.fillStyle = '#fff';
+
+            // Nhún nhảy nhẹ theo thời gian
+            let bounceY = Math.sin(frame * 0.1) * 3;
+            let cy = y + bounceY;
+
+            // 1. Thân hình tròn
+            ctx.beginPath();
+            ctx.arc(x, cy, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 2. Mắt (Chớp mắt tự nhiên)
+            blinkTimer++;
+            if (blinkTimer % 120 > 110) isBlinking = true;
+            else isBlinking = false;
+
+            if (isBlinking) {
+                drawHandDrawnLine(x - 18, cy - 5, x - 8, cy - 5);
+                drawHandDrawnLine(x + 8, cy - 5, x + 18, cy - 5);
+            } else if (emotion === 'wink') {
+                // Mắt nháy 1 bên
+                drawHandDrawnLine(x - 18, cy - 5, x - 8, cy - 5);
+                ctx.beginPath();
+                ctx.arc(x + 13, cy - 5, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#000';
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.arc(x - 13, cy - 5, 4, 0, Math.PI * 2);
+                ctx.arc(x + 13, cy - 5, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#000';
+                ctx.fill();
+            }
+
+            // 3. Miệng (Thay đổi khẩu hình khi nói)
+            ctx.fillStyle = '#000';
+            let mouthOpen = Math.sin(frame * 0.3) > 0 && isTyping;
+
+            if (mouthOpen) {
+                ctx.beginPath();
+                ctx.arc(x, cy + 12, 8, 0, Math.PI);
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.arc(x, cy + 10, 8, 0.1 * Math.PI, 0.9 * Math.PI);
+                ctx.stroke();
+            }
+
+            // 4. Tay trái & Tay phải (Vẫy tay linh động)
+            let waveOffset = Math.sin(frame * 0.15) * 15;
+            
+            // Tay trái
+            drawHandDrawnLine(x - 38, cy + 5, x - 55, cy + 20);
+
+            // Tay phải (Vẫy chào khi ở emotion "wave")
+            if (emotion === 'wave' || emotion === 'excited') {
+                drawHandDrawnLine(x + 38, cy + 5, x + 55 + waveOffset, cy - 25);
+            } else {
+                drawHandDrawnLine(x + 38, cy + 5, x + 55, cy + 20);
+            }
+        }
+
+        function drawSpeechBubble(text) {
+            ctx.font = "bold 15px 'Courier New', monospace";
+            ctx.fillStyle = "#000";
+            ctx.textAlign = "center";
+
+            let lines = text.split('\n');
+            let startY = 60;
+
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], canvas.width / 2, startY + (i * 22));
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            frame++;
+
+            let currentEmotion = messages[msgIndex] ? messages[msgIndex].emotion : "happy";
+            
+            // Vẽ thoại
+            drawSpeechBubble(currentText);
+
+            // Vẽ nhân vật hoạt hình
+            drawCharacter(canvas.width / 2, 220, currentEmotion);
+
+            requestAnimationFrame(animate);
+        }
+
+        function typeWriter() {
+            if (msgIndex < messages.length) {
+                isTyping = true;
+                let fullText = messages[msgIndex].text;
+
+                if (charIndex < fullText.length) {
+                    currentText = fullText.substring(0, charIndex + 1);
+                    charIndex++;
+                    setTimeout(typeWriter, 55);
+                } else {
+                    isTyping = false;
+                    setTimeout(() => {
+                        charIndex = 0;
+                        msgIndex++;
+                        typeWriter();
+                    }, 2200);
+                }
+            } else {
+                isTyping = false;
+                replayBtn.style.display = "block";
+            }
+        }
+
+        function restartAnimation() {
+            msgIndex = 0;
+            charIndex = 0;
+            currentText = "";
+            replayBtn.style.display = "none";
+            typeWriter();
+        }
+
+        // Chạy animation
+        animate();
+        setTimeout(typeWriter, 500);
+    </script>
+</body>
+</html>
